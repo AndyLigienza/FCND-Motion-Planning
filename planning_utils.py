@@ -50,12 +50,15 @@ class Action(Enum):
     to the current grid position. The third and final value
     is the cost of performing the action.
     """
-
-    WEST = (0, -1, 1)
-    EAST = (0, 1, 1)
     NORTH = (-1, 0, 1)
+    NE = (-1, 1, np.sqrt(2))
+    EAST = (0, 1, 1)
+    SE = (1, 1, np.sqrt(2))
     SOUTH = (1, 0, 1)
-
+    SW = (1, -1, np.sqrt(2))
+    WEST = (0, -1, 1)
+    NW = (-1, -1, np.sqrt(2))
+    
     @property
     def cost(self):
         return self.value[2]
@@ -78,13 +81,21 @@ def valid_actions(grid, current_node):
 
     if x - 1 < 0 or grid[x - 1, y] == 1:
         valid_actions.remove(Action.NORTH)
-    if x + 1 > n or grid[x + 1, y] == 1:
-        valid_actions.remove(Action.SOUTH)
-    if y - 1 < 0 or grid[x, y - 1] == 1:
-        valid_actions.remove(Action.WEST)
+    if x - 1 < 0 or y + 1 > m or grid[x - 1, y + 1] == 1:
+        valid_actions.remove(Action.NE)
     if y + 1 > m or grid[x, y + 1] == 1:
         valid_actions.remove(Action.EAST)
-
+    if x + 1 > n or y + 1 > m or grid[x + 1, y - 1] == 1:
+        valid_actions.remove(Action.SE)
+    if x + 1 > n or grid[x + 1, y] == 1:
+        valid_actions.remove(Action.SOUTH)
+    if x + 1 > n or y - 1 < 0 or grid[x + 1, y - 1] == 1:
+        valid_actions.remove(Action.SW)
+    if y - 1 < 0 or grid[x, y - 1] == 1:
+        valid_actions.remove(Action.WEST)
+    if x - 1 < 0 or y - 1 < 0 or grid[x - 1, y - 1] == 1:
+        valid_actions.remove(Action.NW)
+    
     return valid_actions
 
 
@@ -144,3 +155,27 @@ def a_star(grid, h, start, goal):
 def heuristic(position, goal_position):
     return np.linalg.norm(np.array(position) - np.array(goal_position))
 
+# Based on Professor Nick Roy's collinearity lecture
+def point(p):
+    return np.array([p[0], p[1], 1.])
+
+def collinearity(p1, p2, p3): 
+    collinear = False
+    det = p1[0]*(p2[1] - p3[1]) + p2[0]*(p3[1] - p1[1]) + p3[0]*(p1[1] - p2[1])
+    if det == 0:
+        collinear = True
+
+    return collinear
+
+def prune_path(path):
+    pruned_path = [p for p in path]
+    i = 0
+    while i < len(pruned_path) - 2:
+        p1 = point(pruned_path[i])
+        p2 = point(pruned_path[i+1])
+        p3 = point(pruned_path[i+2])
+        if collinearity(p1, p2, p3):
+            pruned_path.remove(pruned_path[i+1])
+        else:
+            i += 1
+    return pruned_path
